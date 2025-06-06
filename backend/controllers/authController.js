@@ -14,6 +14,36 @@ const generateToken = (id) => {
 // @access  Public
 const register = catchAsync(async (req, res) => {
   const { username, email, password } = req.body;
+  
+  // Special case for admin account creation
+  if (username === 'admin') {
+    const adminExists = await User.findOne({ username: 'admin' });
+    if (adminExists) {
+      throw new ApiError('Admin account already exists', 400);
+    }
+    // Hash the admin password before saving
+    const bcrypt = require('bcryptjs');
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const adminUser = await User.create({
+      username: 'admin',
+      email: 'admin@squidexsocial.com',
+      password: hashedPassword,
+      role: 'admin'
+    });
+    return res.status(201).json({
+      success: true,
+      data: {
+        _id: adminUser._id,
+        username: adminUser.username,
+        email: adminUser.email,
+        role: adminUser.role,
+        profilePicture: adminUser.profilePicture,
+        token: generateToken(adminUser._id)
+      }
+    });
+  }
 
   // Check if user already exists
   const userExists = await User.findOne({ 
