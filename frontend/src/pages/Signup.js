@@ -82,11 +82,11 @@ const Signup = () => {
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-            Create Account
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-500 bg-clip-text text-transparent">
+            Join Squidex Social
           </h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Join SocialApp and connect with friends
+            Create an account and connect with friends
           </p>
         </div>
 
