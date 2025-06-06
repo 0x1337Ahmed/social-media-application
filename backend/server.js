@@ -12,14 +12,18 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIO(server, {
   cors: {
-    origin: "http://localhost:5173", // Vite's default port
-    methods: ["GET", "POST"],
+    origin: ["http://localhost:8000", "http://localhost:3000"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   }
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ["http://localhost:8000", "http://localhost:3000"],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -71,7 +75,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5002;
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
