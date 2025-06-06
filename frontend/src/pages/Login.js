@@ -34,11 +34,11 @@ const Login = () => {
       <div className="max-w-md w-full space-y-8">
         {/* Logo and Title */}
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-            Welcome Back
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-500 bg-clip-text text-transparent">
+            Squidex Social
           </h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Sign in to continue to SocialApp
+            Sign in to continue to your social space
           </p>
         </div>
 
