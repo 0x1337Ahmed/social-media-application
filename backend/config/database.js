@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const connectDB = async () => {
   try {
     // Set default MongoDB URI if not provided in environment variables
-    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/social-media-app';
+    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/squidex-social';
     
     const conn = await mongoose.connect(mongoURI, {
       useNewUrlParser: true,
