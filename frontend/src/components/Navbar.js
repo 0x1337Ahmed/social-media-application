@@ -29,8 +29,8 @@ const Navbar = ({ onMenuClick }) => {
 
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <span className="text-xl font-bold text-blue-600 dark:text-blue-500">
-              SocialApp
+            <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-500 bg-clip-text text-transparent">
+              Squidex Social
             </span>
           </Link>
         </div>
