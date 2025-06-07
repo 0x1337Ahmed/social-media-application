@@ -15,7 +15,7 @@ const FriendSuggestions = () => {
   const fetchSuggestions = async () => {
     try {
       // Search for users who aren't friends yet
-      const response = await axios.get('/friends/search?query=');
+      const response = await axios.get('/api/friends/search?query=');
       setSuggestions(
         response.data.data
           .filter(user => user.friendshipStatus === 'none')
@@ -33,7 +33,7 @@ const FriendSuggestions = () => {
 
     setSendingRequests(prev => ({ ...prev, [userId]: true }));
     try {
-      await axios.post('/friends/request', { userId });
+      await axios.post('/api/friends/request', { userId });
       setSuggestions(prev => 
         prev.map(user => 
           user._id === userId 
