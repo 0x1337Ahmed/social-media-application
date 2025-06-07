@@ -19,12 +19,36 @@ export const AuthProvider = ({ children }) => {
 
   // Configure axios defaults
   axios.defaults.baseURL = '/api';
+  axios.defaults.withCredentials = true; // Enable sending cookies
   axios.defaults.headers.common['Authorization'] = token ? `Bearer ${token}` : '';
+  axios.defaults.headers.common['Content-Type'] = 'application/json';
 
   // Update axios authorization header when token changes
   useEffect(() => {
     axios.defaults.headers.common['Authorization'] = token ? `Bearer ${token}` : '';
   }, [token]);
+
+  // Handle axios response interceptor for 401 errors
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          // Clear user data if unauthorized
+          setToken(null);
+          setUser(null);
+          localStorage.removeItem('token');
+          toast.error('Session expired. Please login again.');
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      // Remove interceptor on cleanup
+      axios.interceptors.response.eject(interceptor);
+    };
+  }, []);
 
   // Check if user is authenticated on mount
   useEffect(() => {
@@ -35,14 +59,17 @@ export const AuthProvider = ({ children }) => {
           setUser(response.data.data);
         } catch (error) {
           console.error('Auth initialization error:', error);
-          logout();
+          // Call local logout function instead of the main logout function
+          setToken(null);
+          setUser(null);
+          localStorage.removeItem('token');
         }
       }
       setLoading(false);
     };
 
     initializeAuth();
-  }, [token]);
+  }, [token]); // Remove logout from dependencies to avoid circular dependency
 
   const login = async (email, password) => {
     try {
@@ -57,6 +84,24 @@ export const AuthProvider = ({ children }) => {
       return true;
     } catch (error) {
       const message = error.response?.data?.message || 'Login failed';
+      toast.error(message);
+      return false;
+    }
+  };
+
+  const guestLogin = async () => {
+    try {
+      const response = await axios.post('/auth/guest-login');
+      const { token: newToken, ...userData } = response.data.data;
+
+      setToken(newToken);
+      setUser(userData);
+      localStorage.setItem('token', newToken);
+
+      toast.success('Logged in as guest!');
+      return true;
+    } catch (error) {
+      const message = error.response?.data?.message || 'Guest login failed';
       toast.error(message);
       return false;
     }
@@ -132,7 +177,8 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateProfile,
-    changePassword
+    changePassword,
+    guestLogin
   };
 
   return (
