@@ -14,6 +14,7 @@ const Explore = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [joiningGroup, setJoiningGroup] = useState(null);
+  const [loadingRandom, setLoadingRandom] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -24,13 +25,13 @@ const Explore = () => {
     try {
       if (activeTab === 'trending') {
         const [postsRes, tagsRes] = await Promise.all([
-          axios.get('/explore/trending'),
-          axios.get('/explore/trending-tags')
+          axios.get('/api/explore/trending'),
+          axios.get('/api/explore/trending-tags')
         ]);
         setTrendingPosts(postsRes.data.data);
         setTrendingTags(tagsRes.data.data);
       } else if (activeTab === 'groups') {
-        const response = await axios.get('/explore/groups');
+        const response = await axios.get('/api/explore/groups');
         setPopularGroups(response.data.data);
       }
     } catch (error) {
@@ -45,7 +46,7 @@ const Explore = () => {
 
     setSearching(true);
     try {
-      const response = await axios.get(`/friends/search?query=${searchQuery}`);
+      const response = await axios.get(`/api/friends/search?query=${searchQuery}`);
       setSearchResults(response.data.data);
       setActiveTab('search');
     } catch (error) {
@@ -55,10 +56,28 @@ const Explore = () => {
     }
   };
 
+  const handleSurpriseMe = async () => {
+    setLoadingRandom(true);
+    try {
+      const response = await axios.get('/api/explore/random-group');
+      const randomGroup = response.data.data;
+      if (randomGroup) {
+        await handleJoinGroup(randomGroup._id);
+        toast.success('Joined a random group!');
+      } else {
+        toast.info('No available groups found');
+      }
+    } catch (error) {
+      toast.error('Failed to find a random group');
+    } finally {
+      setLoadingRandom(false);
+    }
+  };
+
   const handleJoinGroup = async (groupId) => {
     setJoiningGroup(groupId);
     try {
-      await axios.post(`/chats/${groupId}/participants`);
+      await axios.post(`/api/chats/${groupId}/participants`);
       setPopularGroups(prev =>
         prev.map(group =>
           group._id === groupId ? { ...group, isMember: true } : group
@@ -118,25 +137,48 @@ const Explore = () => {
 
       {/* Navigation Tabs */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
-        <div className="p-2 flex space-x-2">
-          <TabButton
-            id="trending"
-            label="Trending"
-            icon={
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-            }
-          />
-          <TabButton
-            id="groups"
-            label="Groups"
-            icon={
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            }
-          />
+        <div className="p-2 flex items-center justify-between">
+          <div className="flex space-x-2">
+            <TabButton
+              id="trending"
+              label="Trending"
+              icon={
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+              }
+            />
+            <TabButton
+              id="groups"
+              label="Groups"
+              icon={
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              }
+            />
+          </div>
+          {activeTab === 'groups' && (
+            <button
+              onClick={handleSurpriseMe}
+              disabled={loadingRandom}
+              className="btn-primary flex items-center space-x-2"
+            >
+              {loadingRandom ? (
+                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Surprise Me!</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -210,7 +252,7 @@ const Explore = () => {
                 {trendingTags.map(tag => (
                   <Link
                     key={tag._id}
-                    to={`/explore/tags/${tag._id}`}
+    to={`/explore/tags/${tag._id}`}
                     className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                   >
                     #{tag._id}
