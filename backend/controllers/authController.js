@@ -113,6 +113,40 @@ const login = catchAsync(async (req, res) => {
   });
 });
 
+// @desc    Guest login
+// @route   POST /api/auth/guest-login
+// @access  Public
+const guestLogin = catchAsync(async (req, res) => {
+  // Check if guest user exists
+  let guestUser = await User.findOne({ username: 'guest' });
+
+  if (!guestUser) {
+    // Create guest user with random password
+    const randomPassword = Math.random().toString(36).slice(-8);
+    guestUser = await User.create({
+      username: 'guest',
+      email: 'guest@squidexsocial.com',
+      password: randomPassword,
+      role: 'guest'
+    });
+  }
+
+  // Update online status
+  guestUser.isOnline = true;
+  await guestUser.save();
+
+  res.json({
+    success: true,
+    data: {
+      _id: guestUser._id,
+      username: guestUser.username,
+      email: guestUser.email,
+      profilePicture: guestUser.profilePicture,
+      token: generateToken(guestUser._id)
+    }
+  });
+});
+
 // @desc    Logout user
 // @route   POST /api/auth/logout
 // @access  Private
@@ -199,5 +233,6 @@ module.exports = {
   logout,
   getMe,
   updateProfile,
-  changePassword
+  changePassword,
+  guestLogin
 };
