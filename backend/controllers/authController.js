@@ -13,7 +13,10 @@ const generateToken = (id) => {
 // @route   POST /api/auth/register
 // @access  Public
 const register = catchAsync(async (req, res) => {
-  const { username, email, password } = req.body;
+  let { username, email, password } = req.body;
+
+  // Normalize email to ensure case-insensitive comparisons
+  email = email?.toLowerCase();
   
   // Special case for admin account creation
   if (username === 'admin') {
@@ -46,8 +49,8 @@ const register = catchAsync(async (req, res) => {
   }
 
   // Check if user already exists
-  const userExists = await User.findOne({ 
-    $or: [{ email }, { username }] 
+  const userExists = await User.findOne({
+    $or: [{ email }, { username }]
   });
 
   if (userExists) {
@@ -81,7 +84,10 @@ const register = catchAsync(async (req, res) => {
 // @route   POST /api/auth/login
 // @access  Public
 const login = catchAsync(async (req, res) => {
-  const { email, password } = req.body;
+  let { email, password } = req.body;
+
+  // Normalize email to ensure case-insensitive matching
+  email = email?.toLowerCase();
 
   // Check for user email
   const user = await User.findOne({ email }).select('+password');
