@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middlewares/authMiddleware');
 const {
   searchUsers,
   sendFriendRequest,
@@ -11,20 +10,62 @@ const {
   getFriends
 } = require('../controllers/friendController');
 
+const { protect } = require('../middlewares/authMiddleware');
+const { rateLimiters } = require('../middlewares/rateLimitMiddleware');
+const { 
+  sanitizeInput,
+  validateObjectId
+} = require('../middlewares/validationMiddleware');
+
 // All routes are protected
 router.use(protect);
 
-// Search users
-router.get('/search', searchUsers);
+// Apply rate limiting to friend requests
+router.use(['/request', '/accept', '/reject', '/cancel', '/remove'], rateLimiters.friendRequests);
 
-// Friend requests
-router.post('/request', sendFriendRequest);
-router.post('/accept', acceptFriendRequest);
-router.post('/reject', rejectFriendRequest);
-router.post('/cancel', cancelFriendRequest);
+// Search users with sanitization
+router.get(
+  '/search',
+  sanitizeInput,
+  searchUsers
+);
 
-// Friend management
-router.post('/remove', removeFriend);
-router.get('/', getFriends);
+// Friend request operations with ID validation
+router.post(
+  '/request',
+  validateObjectId,
+  sendFriendRequest
+);
+
+router.post(
+  '/accept',
+  validateObjectId,
+  acceptFriendRequest
+);
+
+router.post(
+  '/reject',
+  validateObjectId,
+  rejectFriendRequest
+);
+
+router.post(
+  '/cancel',
+  validateObjectId,
+  cancelFriendRequest
+);
+
+// Friend management with ID validation
+router.post(
+  '/remove',
+  validateObjectId,
+  removeFriend
+);
+
+// Get friends list
+router.get(
+  '/',
+  getFriends
+);
 
 module.exports = router;
