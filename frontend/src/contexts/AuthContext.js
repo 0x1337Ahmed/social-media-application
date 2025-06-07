@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
 
   // Configure axios defaults
-  axios.defaults.baseURL = 'http://localhost:5002/api';
+  axios.defaults.baseURL = '/api';
   axios.defaults.headers.common['Authorization'] = token ? `Bearer ${token}` : '';
 
   // Update axios authorization header when token changes
