@@ -1,11 +1,14 @@
 const mongoose = require('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 
 const connectDB = async () => {
   try {
-    // Set default MongoDB URI if not provided in environment variables
-    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/squidex-social';
-    
-    const conn = await mongoose.connect(mongoURI, {
+    // Create an instance of MongoDB Memory Server
+    const mongod = await MongoMemoryServer.create();
+    const mongoUri = mongod.getUri();
+
+    // Connect to the in-memory database
+    const conn = await mongoose.connect(mongoUri, {
       useNewUrlParser: true,
       useUnifiedTopology: true
     });
