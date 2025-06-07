@@ -7,13 +7,11 @@ const { ApiError, catchAsync } = require('../middlewares/errorMiddleware');
 const searchUsers = catchAsync(async (req, res) => {
   const { query } = req.query;
   
-  if (!query) {
-    throw new ApiError('Please provide a search query', 400);
-  }
+  const searchQuery = query || '';
 
   // Search users by username, excluding the current user
   const users = await User.find({
-    username: { $regex: query, $options: 'i' },
+    username: { $regex: searchQuery, $options: 'i' },
     _id: { $ne: req.user._id }
   })
   .select('username profilePicture bio isOnline')
