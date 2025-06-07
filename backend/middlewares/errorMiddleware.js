@@ -1,4 +1,3 @@
-// Custom error class for API errors
 class ApiError extends Error {
   constructor(message, statusCode) {
     super(message);
@@ -10,89 +9,97 @@ class ApiError extends Error {
   }
 }
 
-// Error handler middleware
-const errorHandler = (err, req, res, next) => {
-  err.statusCode = err.statusCode || 500;
-  err.status = err.status || 'error';
-
-  // Development error response (detailed)
-  if (process.env.NODE_ENV === 'development') {
-    res.status(err.statusCode).json({
-      success: false,
-      status: err.status,
-      message: err.message,
-      stack: err.stack,
-      error: err
-    });
-  } 
-  // Production error response (less detailed)
-  else {
-    // Operational, trusted error: send message to client
-    if (err.isOperational) {
-      res.status(err.statusCode).json({
-        success: false,
-        status: err.status,
-        message: err.message
-      });
-    } 
-    // Programming or other unknown error: don't leak error details
-    else {
-      console.error('ERROR 💥', err);
-      res.status(500).json({
-        success: false,
-        status: 'error',
-        message: 'Something went wrong!'
-      });
-    }
+// Error classification helper
+const classifyError = (err) => {
+  // Mongoose validation error
+  if (err.name === 'ValidationError') {
+    const message = Object.values(err.errors).map(e => e.message).join(', ');
+    return new ApiError(message, 400);
   }
+
+  // Mongoose duplicate key error
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyValue)[0];
+    const message = `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`;
+    return new ApiError(message, 400);
+  }
+
+  // Mongoose CastError (invalid ObjectId)
+  if (err.name === 'CastError') {
+    const message = `Invalid ${err.path}: ${err.value}`;
+    return new ApiError(message, 400);
+  }
+
+  // JWT errors
+  if (err.name === 'JsonWebTokenError') {
+    return new ApiError('Invalid token', 401);
+  }
+
+  if (err.name === 'TokenExpiredError') {
+    return new ApiError('Token has expired', 401);
+  }
+
+  // Return original error if unclassified
+  return err;
 };
 
-// Middleware to handle async errors
+// Async handler wrapper
 const catchAsync = (fn) => {
   return (req, res, next) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
 };
 
-// Handle MongoDB duplicate key errors
-const handleDuplicateKeyError = (err) => {
-  const field = Object.keys(err.keyValue)[0];
-  const message = `Duplicate ${field}. Please use another value.`;
-  return new ApiError(message, 400);
+// Error logging function
+const logError = (err) => {
+  console.error('\x1b[31m%s\x1b[0m', '🔥 ERROR 🔥');
+  console.error('Timestamp:', new Date().toISOString());
+  console.error('Error Name:', err.name);
+  console.error('Error Message:', err.message);
+  console.error('Error Stack:', err.stack);
+  if (err.code) console.error('Error Code:', err.code);
+  console.error('-----------------------------------');
 };
 
-// Handle MongoDB validation errors
-const handleValidationError = (err) => {
-  const errors = Object.values(err.errors).map(el => el.message);
-  const message = `Invalid input data. ${errors.join('. ')}`;
-  return new ApiError(message, 400);
-};
+// Global error handler
+const errorHandler = (err, req, res, next) => {
+  err.statusCode = err.statusCode || 500;
+  err.status = err.status || 'error';
 
-// Handle JWT errors
-const handleJWTError = () =>
-  new ApiError('Invalid token. Please log in again.', 401);
+  // Log error
+  logError(err);
 
-const handleJWTExpiredError = () =>
-  new ApiError('Your token has expired. Please log in again.', 401);
+  // Classify and transform error
+  const error = classifyError(err);
 
-// Global error handling setup
-const setupErrorHandling = (app) => {
-  app.use((err, req, res, next) => {
-    // MongoDB errors
-    if (err.code === 11000) err = handleDuplicateKeyError(err);
-    if (err.name === 'ValidationError') err = handleValidationError(err);
-    
-    // JWT errors
-    if (err.name === 'JsonWebTokenError') err = handleJWTError();
-    if (err.name === 'TokenExpiredError') err = handleJWTExpiredError();
+  // Development error response
+  if (process.env.NODE_ENV === 'development') {
+    return res.status(error.statusCode).json({
+      success: false,
+      status: error.status,
+      message: error.message,
+      stack: error.stack,
+      error: error
+    });
+  }
 
-    errorHandler(err, req, res, next);
+  // Production error response
+  return res.status(error.statusCode).json({
+    success: false,
+    status: error.status,
+    message: error.isOperational ? error.message : 'Something went wrong'
   });
+};
+
+// 404 handler
+const notFound = (req, res, next) => {
+  const error = new ApiError(`Not found - ${req.originalUrl}`, 404);
+  next(error);
 };
 
 module.exports = {
   ApiError,
   catchAsync,
   errorHandler,
-  setupErrorHandling
+  notFound
 };
