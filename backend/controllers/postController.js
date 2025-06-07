@@ -2,6 +2,22 @@ const Post = require('../models/Post');
 const User = require('../models/User');
 const { ApiError, catchAsync } = require('../middlewares/errorMiddleware');
 
+// Helper to get post ID from params
+const getPostId = (params) => params.postId || params.id;
+
+// Ensure the current user can access the post
+const verifyVisibility = async (post, userId) => {
+  if (post.visibility === 'private' && post.author.toString() !== userId.toString()) {
+    throw new ApiError('Not authorized to access this post', 403);
+  }
+  if (post.visibility === 'friends') {
+    const author = await User.findById(post.author);
+    if (!author.friends.includes(userId) && post.author.toString() !== userId.toString()) {
+      throw new ApiError('Not authorized to access this post', 403);
+    }
+  }
+};
+
 // @desc    Create a new post
 // @route   POST /api/posts
 // @access  Private
@@ -66,6 +82,9 @@ const getFeedPosts = catchAsync(async (req, res) => {
   });
 });
 
+// Alias for feed posts used by routes
+const getPosts = getFeedPosts;
+
 // @desc    Get user's posts
 // @route   GET /api/posts/user/:userId
 // @access  Private
@@ -109,27 +128,43 @@ const getUserPosts = catchAsync(async (req, res) => {
   });
 });
 
+// @desc    Get a single post
+// @route   GET /api/posts/:id
+// @access  Private
+const getPost = catchAsync(async (req, res) => {
+  const postId = getPostId(req.params);
+
+  const post = await Post.findById(postId)
+    .populate('author', 'username profilePicture')
+    .populate({
+      path: 'comments.user',
+      select: 'username profilePicture'
+    });
+
+  if (!post) {
+    throw new ApiError('Post not found', 404);
+  }
+
+  await verifyVisibility(post, req.user._id);
+
+  res.json({
+    success: true,
+    data: post.toClientJSON(req.user._id)
+  });
+});
+
 // @desc    Like/Unlike a post
 // @route   POST /api/posts/:postId/like
 // @access  Private
 const toggleLike = catchAsync(async (req, res) => {
-  const { postId } = req.params;
+  const postId = getPostId(req.params);
 
   const post = await Post.findById(postId);
   if (!post) {
     throw new ApiError('Post not found', 404);
   }
 
-  // Check visibility permissions
-  if (post.visibility === 'private' && post.author.toString() !== req.user._id.toString()) {
-    throw new ApiError('Not authorized to access this post', 403);
-  }
-  if (post.visibility === 'friends') {
-    const author = await User.findById(post.author);
-    if (!author.friends.includes(req.user._id)) {
-      throw new ApiError('Not authorized to access this post', 403);
-    }
-  }
+  await verifyVisibility(post, req.user._id);
 
   const isLiked = post.likes.includes(req.user._id);
   if (isLiked) {
@@ -149,11 +184,52 @@ const toggleLike = catchAsync(async (req, res) => {
   });
 });
 
+// Separate like and unlike handlers for clarity
+const likePost = catchAsync(async (req, res) => {
+  const postId = getPostId(req.params);
+  const post = await Post.findById(postId);
+  if (!post) {
+    throw new ApiError('Post not found', 404);
+  }
+
+  await verifyVisibility(post, req.user._id);
+
+  if (!post.likes.includes(req.user._id)) {
+    post.likes.addToSet(req.user._id);
+    await post.save();
+  }
+
+  res.json({
+    success: true,
+    data: { liked: true, likeCount: post.likes.length }
+  });
+});
+
+const unlikePost = catchAsync(async (req, res) => {
+  const postId = getPostId(req.params);
+  const post = await Post.findById(postId);
+  if (!post) {
+    throw new ApiError('Post not found', 404);
+  }
+
+  await verifyVisibility(post, req.user._id);
+
+  if (post.likes.includes(req.user._id)) {
+    post.likes.pull(req.user._id);
+    await post.save();
+  }
+
+  res.json({
+    success: true,
+    data: { liked: false, likeCount: post.likes.length }
+  });
+});
+
 // @desc    Comment on a post
 // @route   POST /api/posts/:postId/comments
 // @access  Private
 const addComment = catchAsync(async (req, res) => {
-  const { postId } = req.params;
+  const postId = getPostId(req.params);
   const { content } = req.body;
 
   if (!content) {
@@ -169,16 +245,7 @@ const addComment = catchAsync(async (req, res) => {
     throw new ApiError('Post not found', 404);
   }
 
-  // Check visibility permissions
-  if (post.visibility === 'private' && post.author.toString() !== req.user._id.toString()) {
-    throw new ApiError('Not authorized to access this post', 403);
-  }
-  if (post.visibility === 'friends') {
-    const author = await User.findById(post.author);
-    if (!author.friends.includes(req.user._id)) {
-      throw new ApiError('Not authorized to access this post', 403);
-    }
-  }
+  await verifyVisibility(post, req.user._id);
 
   post.comments.push({
     user: req.user._id,
@@ -200,11 +267,49 @@ const addComment = catchAsync(async (req, res) => {
   });
 });
 
+// @desc    Delete a comment
+// @route   DELETE /api/posts/:postId/comments/:commentId
+// @access  Private
+const deleteComment = catchAsync(async (req, res) => {
+  const postId = getPostId(req.params);
+  const { commentId } = req.params;
+
+  const post = await Post.findById(postId);
+  if (!post) {
+    throw new ApiError('Post not found', 404);
+  }
+
+  const comment = post.comments.id(commentId);
+  if (!comment) {
+    throw new ApiError('Comment not found', 404);
+  }
+
+  // Allow deletion if author of comment or author of post
+  if (comment.user.toString() !== req.user._id.toString() && post.author.toString() !== req.user._id.toString()) {
+    throw new ApiError('Not authorized to delete this comment', 403);
+  }
+
+  comment.remove();
+  await post.save();
+
+  const updatedPost = await Post.findById(postId)
+    .populate('author', 'username profilePicture')
+    .populate({
+      path: 'comments.user',
+      select: 'username profilePicture'
+    });
+
+  res.json({
+    success: true,
+    data: updatedPost.toClientJSON(req.user._id)
+  });
+});
+
 // @desc    Delete a post
 // @route   DELETE /api/posts/:postId
 // @access  Private
 const deletePost = catchAsync(async (req, res) => {
-  const { postId } = req.params;
+  const postId = getPostId(req.params);
 
   const post = await Post.findById(postId);
   if (!post) {
@@ -228,7 +333,7 @@ const deletePost = catchAsync(async (req, res) => {
 // @route   PUT /api/posts/:postId
 // @access  Private
 const updatePost = catchAsync(async (req, res) => {
-  const { postId } = req.params;
+  const postId = getPostId(req.params);
   const { content, visibility, tags } = req.body;
 
   const post = await Post.findById(postId);
@@ -275,9 +380,14 @@ const updatePost = catchAsync(async (req, res) => {
 module.exports = {
   createPost,
   getFeedPosts,
+  getPosts,
   getUserPosts,
+  getPost,
   toggleLike,
+  likePost,
+  unlikePost,
   addComment,
+  deleteComment,
   deletePost,
   updatePost
 };
