@@ -12,7 +12,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIO(server, {
   cors: {
-    origin: ["http://localhost:8000", "http://localhost:3000"],
+    origin: ["http://localhost:8000", "http://localhost:3000", "http://localhost:3001"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   }
@@ -20,7 +20,7 @@ const io = socketIO(server, {
 
 // Middleware
 app.use(cors({
-  origin: ["http://localhost:8000", "http://localhost:3000"],
+  origin: ["http://localhost:8000", "http://localhost:3000", "http://localhost:3001"],
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
