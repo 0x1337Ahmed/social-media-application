@@ -53,7 +53,7 @@ router.post('/logout', logout);
 router.get('/me', getMe);
 
 router.put(
-  '/update-profile',
+  '/me',
   sanitizeInput,
   validate({
     username: validationRules.username,
