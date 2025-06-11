@@ -1,5 +1,6 @@
 const Post = require('../models/Post');
 const Chat = require('../models/Chat');
+const User = require('../models/User');
 const { ApiError, catchAsync } = require('../middlewares/errorMiddleware');
 
 // @desc    Get trending posts
@@ -201,10 +202,55 @@ const getTrendingTags = catchAsync(async (req, res) => {
   });
 });
 
+// @desc    Search content (posts, users, tags)
+// @route   GET /api/explore/search
+// @access  Private
+const searchContent = catchAsync(async (req, res) => {
+  const { query, type = 'all' } = req.query;
+  const results = { posts: [], users: [], tags: [] };
+
+  if (type === 'all' || type === 'posts') {
+    results.posts = await Post.find({
+      $or: [
+        { content: { $regex: query, $options: 'i' } },
+        { tags: { $regex: query, $options: 'i' } }
+      ],
+      visibility: 'public'
+    })
+    .populate('author', 'username profilePicture')
+    .limit(10);
+  }
+
+  if (type === 'all' || type === 'users') {
+    results.users = await User.find({
+      username: { $regex: query, $options: 'i' }
+    })
+    .select('username profilePicture bio')
+    .limit(10);
+  }
+
+  if (type === 'all' || type === 'tags') {
+    const tagResults = await Post.aggregate([
+      { $unwind: '$tags' },
+      { $match: { 'tags': { $regex: query, $options: 'i' } } },
+      { $group: { _id: '$tags', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 }
+    ]);
+    results.tags = tagResults;
+  }
+
+  res.json({
+    success: true,
+    data: results
+  });
+});
+
 module.exports = {
   getTrendingPosts,
   getPopularGroups,
   getSurpriseGroup,
   getPostsByTag,
-  getTrendingTags
+  getTrendingTags,
+  searchContent
 };
