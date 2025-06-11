@@ -53,35 +53,38 @@ A full-stack social media application built with the MERN stack (MongoDB, Expres
 ### Installation
 
 1. Clone the repository:
-\`\`\`bash
+```bash
 git clone https://github.com/yourusername/social-media-app.git
 cd social-media-app
-\`\`\`
+```
 
-2. Install dependencies:
-\`\`\`bash
+2. Install dependencies for root, backend, and frontend:
+```bash
 npm run install-all
-\`\`\`
+```
 
-3. Create a .env file in the backend directory:
-\`\`\`env
-PORT=5000
+3. Create a `.env` file in the `backend` directory with the following variables:
+```env
+PORT=5002
 MONGODB_URI=your_mongodb_uri
 JWT_SECRET=your_jwt_secret
-\`\`\`
+JWT_EXPIRE=1d
+SESSION_SECRET=your_session_secret
+MONGO_STORE_SECRET=your_mongo_store_secret
+```
 
 4. Start the development servers:
-\`\`\`bash
+```bash
 npm run dev
-\`\`\`
+```
 
 The application will start with:
-- Backend running on http://localhost:5000
+- Backend running on http://localhost:5002
 - Frontend running on http://localhost:3000
 
 ## Project Structure
 
-\`\`\`
+```
 ├── backend/
 │   ├── config/         # Configuration files
 │   ├── controllers/    # Route controllers
@@ -97,7 +100,7 @@ The application will start with:
 │       ├── pages/      # Page components
 │       └── index.js    # Entry point
 └── package.json
-\`\`\`
+```
 
 ## API Endpoints
 
@@ -138,11 +141,16 @@ The application will start with:
 ## Contributing
 
 1. Fork the repository
-2. Create your feature branch (\`git checkout -b feature/AmazingFeature\`)
-3. Commit your changes (\`git commit -m 'Add some AmazingFeature'\`)
-4. Push to the branch (\`git push origin feature/AmazingFeature\`)
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Notes on Features in Frontend
+
+- Social login buttons (Google, GitHub) in Login and Signup pages are placeholders for future implementation.
+- Account deletion feature in Profile page is not implemented yet and marked as future work.
