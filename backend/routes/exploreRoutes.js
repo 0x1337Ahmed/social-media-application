@@ -5,7 +5,8 @@ const {
   getPopularGroups,
   getSurpriseGroup,
   getPostsByTag,
-  getTrendingTags
+  getTrendingTags,
+  searchContent
 } = require('../controllers/exploreController');
 
 const { protect } = require('../middlewares/authMiddleware');
@@ -57,7 +58,8 @@ router.get(
       }
       return null;
     }
-  })
+  }),
+  searchContent
 );
 
 module.exports = router;
