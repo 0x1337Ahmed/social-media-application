@@ -173,7 +173,9 @@ const Login = () => {
             <button
               type="button"
               className="btn-secondary w-full"
-              onClick={() => {/* TODO: Implement Google login */}}
+              onClick={() => {
+                // TODO: Implement Google login (future work)
+              }}
             >
               <span className="sr-only">Sign in with Google</span>
               Google
@@ -181,7 +183,9 @@ const Login = () => {
             <button
               type="button"
               className="btn-secondary w-full"
-              onClick={() => {/* TODO: Implement GitHub login */}}
+              onClick={() => {
+                // TODO: Implement GitHub login (future work)
+              }}
             >
               <span className="sr-only">Sign in with GitHub</span>
               GitHub
